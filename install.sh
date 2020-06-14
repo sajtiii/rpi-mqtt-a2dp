@@ -12,10 +12,6 @@ CURRENT_PRETTY_HOSTNAME=$(hostnamectl status --pretty)
 read -p "Pretty hostname [${CURRENT_PRETTY_HOSTNAME:-Raspberry Pi}]: " PRETTY_HOSTNAME
 hostnamectl set-hostname --pretty "${PRETTY_HOSTNAME:-${CURRENT_PRETTY_HOSTNAME:-Raspberry Pi}}"
 
-echo "Adding Mosquitto server repository"
-wget http://repo.mosquitto.org/debian/mosquitto-repo.gpg.key
-apt-key add mosquitto-repo.gpg.key
-wget http://repo.mosquitto.org/debian/mosquitto-buster.list -P /etc/apt/sources.list.d/
 
 echo "Updating packages"
 apt update
@@ -23,7 +19,7 @@ apt upgrade -y
 
 
 echo "Installing services"
-apt install -y --no-install-recommends alsa-base alsa-utils bluealsa python-gobject python-smbus python-dbus python-paho-mqtt python-alsaaudio mosquitto
+apt install -y --no-install-recommends alsa-base alsa-utils bluealsa python-gobject python-smbus python-dbus python-paho-mqtt python-alsaaudio
 
 
 # WoodenBeaver sounds
@@ -63,7 +59,8 @@ Description=Bluetooth A2DP Agent
 Requires=bluetooth.service
 After=bluetooth.service
 [Service]
-ExecStart=/usr/local/bin/a2dp-agent.py
+ExecStart=/usr/bin/python /usr/local/bin/a2dp-agent.py
+User=root
 RestartSec=5
 Restart=always
 [Install]
@@ -78,6 +75,8 @@ chmod 755 /usr/local/bin/btvol-control.py
 cat <<'EOF' > /etc/systemd/system/btvol-control.service
 [Unit]
 Description=Bluetooth and Volume management
+Requires=a2dp-agent.service
+After=a2dp-agent.service
 [Service]
 ExecStart=/usr/local/bin/btvol-control.py
 RestartSec=5

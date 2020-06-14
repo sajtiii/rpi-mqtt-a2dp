@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-import logging
 import traceback
 import alsaaudio
 import paho.mqtt.client as mqtt
@@ -8,7 +7,14 @@ import subprocess
 import time
 import os
 
+# Edit these
+MQTT_HOST = 'localhost'
+MQTT_PORT = 1883
+MQTT_USERNAME = ''
+MQTT_PASSWORD = ''
 
+
+# Do not edit below
 def announceVolume():
     client.publish(mqttTopicPrefix + 'volume', str(mixer.getvolume()[0]), retain=True)
 
@@ -51,7 +57,8 @@ try:
     mixer = alsaaudio.Mixer('Headphone')
 
     client = mqtt.Client()
-    client.connect('localhost')
+    client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
+    client.connect(MQTT_HOST, MQTT_PORT)
     client.subscribe([(mqttTopicPrefix + 'volume/set', 0), (mqttTopicPrefix + 'bluetooth/set', 0)])
     client.on_message = onMessage
     client.loop_start()
@@ -63,10 +70,10 @@ try:
 
 
 except KeyboardInterrupt as ex:
-    logging.info("Manager cancelled by user")
+    print("Manager cancelled by user")
 
 except Exception as ex:
-    logging.error("How embarrassing. The following error occurred {}".format(ex))
+    print("How embarrassing. The following error occurred {}".format(ex))
     traceback.print_exc()
 
 finally:

@@ -18,32 +18,29 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-# Dependencies:
-# sudo apt-get install -y python-gobject
-# sudo apt-get install -y python-smbus
-
 import time
 import signal
 import dbus
 import dbus.service
 import dbus.mainloop.glib
 import gobject
-import logging
 import traceback
 import paho.mqtt.client as mqtt
 import subprocess
 
+# Edit these
+MQTT_HOST = 'localhost'
+MQTT_PORT = 1883
+MQTT_USERNAME = ''
+MQTT_PASSWORD = ''
+
+# Do not edit below
 SERVICE_NAME = "org.bluez"
 AGENT_IFACE = SERVICE_NAME + '.Agent1'
 ADAPTER_IFACE = SERVICE_NAME + ".Adapter1"
 DEVICE_IFACE = SERVICE_NAME + ".Device1"
 PLAYER_IFACE = SERVICE_NAME + '.MediaPlayer1'
 TRANSPORT_IFACE = SERVICE_NAME + '.MediaTransport1'
-
-LOG_LEVEL = logging.INFO
-#LOG_LEVEL = logging.DEBUG
-LOG_FILE = "/dev/stdout"
-LOG_FORMAT = "%(asctime)s %(levelname)s %(message)s"
 
 """Utility functions from bluezutils.py"""
 def getManagedObjects():
@@ -136,7 +133,6 @@ class BluePlayer(dbus.service.Object):
                 transport_path = path
 
         if player_path:
-            logging.debug("Found player on path [{}]".format(player_path))
             self.connected = True
             self.getPlayer(player_path)
             player_properties = self.player.GetAll(PLAYER_IFACE, dbus_interface="org.freedesktop.DBus.Properties")
@@ -146,13 +142,9 @@ class BluePlayer(dbus.service.Object):
             if "Track" in player_properties:
                 self.track = player_properties["Track"]
                 self.announceTrack()
-        else:
-            logging.debug("Could not find player")
 
         if transport_path:
-            logging.debug("Found transport on path [{}]".format(player_path))
             self.transport = self.bus.get_object("org.bluez", transport_path)
-            logging.debug("Transport [{}] has been set".format(transport_path))
             transport_properties = self.transport.GetAll(TRANSPORT_IFACE, dbus_interface="org.freedesktop.DBus.Properties")
             if "State" in transport_properties:
                 self.state = transport_properties["State"]
@@ -160,7 +152,6 @@ class BluePlayer(dbus.service.Object):
     def getPlayer(self, path):
         """Get a media player from a dbus path, and the associated device"""
         self.player = self.bus.get_object("org.bluez", path)
-        logging.debug("Player [{}] has been set".format(path))
         device_path = self.player.Get("org.bluez.MediaPlayer1", "Device", dbus_interface="org.freedesktop.DBus.Properties")
         self.getDevice(device_path)
 
@@ -172,7 +163,6 @@ class BluePlayer(dbus.service.Object):
 
     def playerHandler(self, interface, changed, invalidated, path):
         """Handle relevant property change signals"""
-        logging.debug("Interface [{}] changed [{}] on path [{}]".format(interface, changed, path))
         iface = interface[interface.rfind(".") + 1:]
 
         if iface == "Device1":
@@ -184,11 +174,9 @@ class BluePlayer(dbus.service.Object):
                 self.connected = changed["Connected"]
                 self.announceConnected()
                 if changed["Connected"]:
-                    logging.debug("MediaControl is connected [{}] and interface [{}]".format(path, iface))
                     self.findPlayer()
         elif iface == "MediaTransport1":
             if "State" in changed:
-                logging.debug("State has changed to [{}]".format(changed["State"]))
                 self.state = (changed["State"])
                 self.announceState()
             if "Connected" in changed:
@@ -196,18 +184,15 @@ class BluePlayer(dbus.service.Object):
                 self.announceConnected()
         elif iface == "MediaPlayer1":
             if "Track" in changed:
-                logging.debug("Track has changed to [{}]".format(changed["Track"]))
                 self.track = changed["Track"]
                 self.announceTrack()
             if "Status" in changed:
-                logging.debug("Status has changed to [{}]".format(changed["Status"]))
                 self.status = (changed["Status"])
                 self.announceStatus()
 
     def adapterHandler(self, interface, changed, invalidated, path):
         """Handle relevant property change signals"""
         if "Discoverable" in changed:
-                logging.debug("Adapter dicoverable is [{}]".format(self.discoverable))
                 self.discoverable = changed["Discoverable"]
                 self.announceDiscoverable()
 
@@ -261,7 +246,6 @@ class BluePlayer(dbus.service.Object):
 
 
     def shutdown(self):
-        logging.debug("Shutting down BluePlayer")
         client.loop_stop()
         if self.mainloop:
             self.mainloop.quit()
@@ -277,14 +261,12 @@ class BluePlayer(dbus.service.Object):
     @dbus.service.method(AGENT_IFACE, in_signature="ou", out_signature="")
     def RequestConfirmation(self, device, passkey):
         """Always confirm"""
-        logging.debug("RequestConfirmation returns")
         self.trustDevice(device)
         return
 
     @dbus.service.method(AGENT_IFACE, in_signature="os", out_signature="")
     def AuthorizeService(self, device, uuid):
         """Always authorize"""
-        logging.debug("Authorize service returns")
         return
 
     def trustDevice(self, path):
@@ -297,21 +279,12 @@ class BluePlayer(dbus.service.Object):
         manager = dbus.Interface(self.bus.get_object(SERVICE_NAME, "/org/bluez"), "org.bluez.AgentManager1")
         manager.RegisterAgent(BluePlayer.AGENT_PATH, BluePlayer.CAPABILITY)
         manager.RequestDefaultAgent(BluePlayer.AGENT_PATH)
-        logging.debug("Blueplayer is registered as a default agent")
 
     def startPairing(self):
-        logging.debug("Starting to pair")
         """Make the adpater discoverable"""
         adapter_path = findAdapter().object_path
         adapter = dbus.Interface(self.bus.get_object(SERVICE_NAME, adapter_path), "org.freedesktop.DBus.Properties")
         adapter.Set(ADAPTER_IFACE, "Discoverable", True)
-
-
-logging.basicConfig(filename=LOG_FILE, format=LOG_FORMAT, level=LOG_LEVEL)
-logging.info("Starting BluePlayer")
-
-#gobject.threads_init()
-#dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
 
 time.sleep(2)
@@ -321,17 +294,18 @@ client = None
 
 try:
     client = mqtt.Client()
-    client.connect('localhost')
+    client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
+    client.connect(MQTT_HOST, MQTT_PORT)
 
     player = BluePlayer()
     player.start()
 
 
 except KeyboardInterrupt as ex:
-    logging.info("BluePlayer cancelled by user")
+    print("BluePlayer cancelled by user")
 
 except Exception as ex:
-    logging.error("How embarrassing. The following error occurred {}".format(ex))
+    print("How embarrassing. The following error occurred {}".format(ex))
     traceback.print_exc()
 
 finally:
