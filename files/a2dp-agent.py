@@ -87,7 +87,7 @@ class BluePlayer(dbus.service.Object):
 
     def start(self):
         """Subscribe to MQTT events"""
-        client.subscribe([(self.mqttTopicPrefix + 'track/action', 0)])
+        client.subscribe([(self.mqttTopicPrefix + 'track/action', 0), (self.mqttTopicPrefix + 'status/set', 0)])
         client.on_message = self.onMessage
         client.loop_start()
 
@@ -203,7 +203,8 @@ class BluePlayer(dbus.service.Object):
         client.publish(self.mqttTopicPrefix + 'track', '{"album":"' + (self.track['Album'] if 'Album' in self.track else '') + '","artist":"' + (self.track['Artist'] if 'Artist' in self.track else '') + '","title":"' + (self.track['Title'] if 'Title' in self.track else '') + '","genre":"' + (self.track['Genre'] if 'Genre' in self.track else '') + '","duration":' + str((self.track['Duration'] if 'Duration' in self.track else '')) + '}', retain=True)
 
     def announceStatus(self):
-        client.publish(self.mqttTopicPrefix + 'status', self.status, retain=True)
+        status = {"playing":"play","paused":"pause","stopped":"stop"}[self.status]
+        client.publish(self.mqttTopicPrefix + 'status', status, retain=True)
 
     def announceConnected(self):
         client.publish(self.mqttTopicPrefix + 'connected', self.connected, retain=True)
@@ -238,15 +239,20 @@ class BluePlayer(dbus.service.Object):
         self.transport.VolumeDown(dbus_interface=TRANSPORT_IFACE)
 
     def onMessage(self, client, userdata, message):
+        service = message.topic.replace(self.mqttTopicPrefix, '')
         payload = str(message.payload, encoding = 'utf-8')
-        if (payload == 'play'):
-            self.play()
-        elif (payload == 'pause'):
-            self.pause()
-        elif (payload == 'next'):
-            self.next()
-        elif (payload == 'previous'):
-            self.previous()
+
+        if (service == 'track/action'):
+            if (payload == 'previous'):
+                self.previous()
+            elif (payload == 'next'):
+                self.next()
+
+        if (service == 'status/set'):
+            if (payload == 'play'):
+                self.play()
+            elif (payload == 'pause'):
+                self.pause()
 
 
     def shutdown(self):
