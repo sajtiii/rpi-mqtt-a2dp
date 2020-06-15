@@ -36,12 +36,12 @@ def onMessage(client, userdata, message):
 
 
     if (service == 'bluetooth/set'):
-        print('set')
-        if (message.payload == '0'):
+        payload = str(message.payload, encoding = 'utf-8')
+        if (payload == '0'):
             os.system('hciconfig hci0 down')
-        elif (message.payload == '1'):
+        elif (payload == '1'):
             os.system('hciconfig hci0 up')
-        elif (message.payload == '2'):
+        elif (payload == '2'):
             os.system('hciconfig hci0 down')
             os.system('hciconfig hci0 up')
         announceBluetooth()
