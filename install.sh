@@ -19,8 +19,11 @@ apt upgrade -y
 
 
 echo "Installing services"
-apt install -y --no-install-recommends alsa-base alsa-utils bluealsa python-gobject python-smbus python-dbus python-paho-mqtt python-alsaaudio
+apt install -y --no-install-recommends alsa-base alsa-utils bluealsa libgirepository1.0-dev gcc libcairo2-dev pkg-config gir1.2-gtk-3.0 python3 python3-dev python3-pip
+pip3 install pyalsaaudio paho-mqtt pygobject smbus dbus-python
 
+# Set Headphone jack as output
+amixer cset numid=3 1
 
 # WoodenBeaver sounds
 mkdir -p /usr/local/share/sounds/WoodenBeaver/stereo
@@ -59,7 +62,7 @@ Description=Bluetooth A2DP Agent
 Requires=bluetooth.service
 After=bluetooth.service
 [Service]
-ExecStart=/usr/bin/python /usr/local/bin/a2dp-agent.py
+ExecStart=/usr/bin/python3 /usr/local/bin/a2dp-agent.py
 User=root
 RestartSec=5
 Restart=always
@@ -78,7 +81,8 @@ Description=Bluetooth and Volume management
 Requires=a2dp-agent.service
 After=a2dp-agent.service
 [Service]
-ExecStart=/usr/local/bin/btvol-control.py
+ExecStart=/usr/bin/python3 /usr/local/bin/btvol-control.py
+User=root
 RestartSec=5
 Restart=always
 [Install]

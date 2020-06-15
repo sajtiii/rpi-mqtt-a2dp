@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 """Copyright (c) 2015, Douglas Otwell
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,7 +23,8 @@ import signal
 import dbus
 import dbus.service
 import dbus.mainloop.glib
-import gobject
+#import gobject
+from gi.repository import GLib
 import traceback
 import paho.mqtt.client as mqtt
 import subprocess
@@ -51,7 +52,7 @@ def getManagedObjects():
 def findAdapter():
     objects = getManagedObjects();
     bus = dbus.SystemBus()
-    for path, ifaces in objects.iteritems():
+    for path, ifaces in objects.items():
         adapter = ifaces.get(ADAPTER_IFACE)
         if adapter is None:
             continue
@@ -80,7 +81,8 @@ class BluePlayer(dbus.service.Object):
 
     def __init__(self):
         mac = subprocess.Popen('hciconfig hci0 | grep -oP "([A-F0-9]{2}\:?){6}"', shell=True, stdout=subprocess.PIPE).stdout.read()
-        self.mqttTopicPrefix = ('btspeaker/' + mac.replace(':', '') + '/').replace("\n", '')
+        mac = str(mac, encoding = 'utf-8').replace("\n", "")
+        self.mqttTopicPrefix = 'btspeaker/' + mac.replace(':', '') + '/'
 
 
     def start(self):
@@ -90,7 +92,8 @@ class BluePlayer(dbus.service.Object):
         client.loop_start()
 
         """Initialize gobject and find any current media players"""
-        gobject.threads_init()
+        #GObject.threads_init() 
+        #gobject.threads_init()
         dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
         self.bus = dbus.SystemBus()
@@ -116,7 +119,7 @@ class BluePlayer(dbus.service.Object):
         self.findPlayer()
 
         """Start the BluePlayer by running the gobject mainloop()"""
-        self.mainloop = gobject.MainLoop()
+        self.mainloop = GLib.MainLoop()
         self.mainloop.run()
 
     def findPlayer(self):
@@ -126,7 +129,7 @@ class BluePlayer(dbus.service.Object):
 
         player_path = None
         transport_path = None
-        for path, interfaces in objects.iteritems():
+        for path, interfaces in objects.items():
             if PLAYER_IFACE in interfaces:
                 player_path = path
             if TRANSPORT_IFACE in interfaces:
@@ -273,6 +276,11 @@ class BluePlayer(dbus.service.Object):
         """Set the device to trusted"""
         device_properties = dbus.Interface(self.bus.get_object(SERVICE_NAME, path), "org.freedesktop.DBus.Properties")
         device_properties.Set(DEVICE_IFACE, "Trusted", True)
+
+    def untrustDevice(self, path):
+        """Set the device to trusted"""
+        device_properties = dbus.Interface(self.bus.get_object(SERVICE_NAME, path), "org.freedesktop.DBus.Properties")
+        device_properties.Set(DEVICE_IFACE, "Trusted", False)
 
     def registerAgent(self):
         """Register BluePlayer as the default agent"""

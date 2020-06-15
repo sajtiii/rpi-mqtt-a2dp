@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import traceback
 import alsaaudio
@@ -20,6 +20,7 @@ def announceVolume():
 
 def announceBluetooth():
     state = subprocess.Popen('hciconfig hci0 | grep -oP "(UP|DOWN)"', shell=True, stdout=subprocess.PIPE).stdout.read()
+    state = str(state, encoding = 'utf-8')
     client.publish(mqttTopicPrefix + 'bluetooth', '1' if 'UP' in state else '0', retain=True)
 
 
@@ -52,7 +53,8 @@ mixer = None
 
 try:
     mac = subprocess.Popen('hciconfig hci0 | grep -oP "([A-F0-9]{2}\:?){6}"', shell=True, stdout=subprocess.PIPE).stdout.read()
-    mqttTopicPrefix = ('btspeaker/' + mac.replace(':', '') + '/').replace("\n", '')
+    mac = str(mac, encoding = 'utf-8').replace("\n", "")
+    mqttTopicPrefix = 'btspeaker/' + mac.replace(':', '') + '/'
 
     mixer = alsaaudio.Mixer('Headphone')
 
@@ -66,14 +68,14 @@ try:
     while True:
         announceVolume()
         announceBluetooth()
-        time.sleep(5)
+        time.sleep(60)
 
 
 except KeyboardInterrupt as ex:
     print("Manager cancelled by user")
 
 except Exception as ex:
-    print("How embarrassing. The following error occurred {}".format(ex))
+    print("How embarrassing. The following error occurred: {}".format(ex))
     traceback.print_exc()
 
 finally:
