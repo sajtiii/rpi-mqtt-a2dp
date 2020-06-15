@@ -41,6 +41,14 @@ $ NODE_ENV=production node app
 ```
 
 
+### MQTT Topics
+- `{prefix}/volume`: Getting the current volume (0-100)
+- `{prefix}/volume/set`: Setting a new volume (0-100)
+- `{prefix}/track`: Getting track info. (JSON object containing: artist, title, album, duration, genre)
+- `{prefix}/track/action`: Moving to the next or previous track (Valid payload values: next, previous)
+- `{prefix}/status`: Getting the status of the playback (play, pause, stop)
+- `{prefix}/status/set`: Starting or stopping playback (Valid payload values: play, pause)
+
 ### Credits
 This code is created using the following previously available packages:
 - **Blueplayer** by: Douglas6 (https://github.com/Douglas6/blueplayer/)
