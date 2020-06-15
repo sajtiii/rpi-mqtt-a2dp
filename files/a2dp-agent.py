@@ -238,13 +238,14 @@ class BluePlayer(dbus.service.Object):
         self.transport.VolumeDown(dbus_interface=TRANSPORT_IFACE)
 
     def onMessage(self, client, userdata, message):
-        if (message.payload == 'play'):
+        payload = str(message.payload, encoding = 'utf-8')
+        if (payload == 'play'):
             self.play()
-        elif (message.payload == 'pause'):
+        elif (payload == 'pause'):
             self.pause()
-        elif (message.payload == 'next'):
+        elif (payload == 'next'):
             self.next()
-        elif (message.payload == 'previous'):
+        elif (payload == 'previous'):
             self.previous()
 
 
