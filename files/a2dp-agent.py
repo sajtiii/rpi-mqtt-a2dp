@@ -168,16 +168,22 @@ class BluePlayer(dbus.service.Object):
         """Handle relevant property change signals"""
         iface = interface[interface.rfind(".") + 1:]
 
-        if iface == "Device1":
-            if "Connected" in changed:
-                self.connected = changed["Connected"]
-                self.announceConnected()
-        if iface == "MediaControl1":
+        if (iface == "Device1" or iface == "MediaControl1"):
             if "Connected" in changed:
                 self.connected = changed["Connected"]
                 self.announceConnected()
                 if changed["Connected"]:
-                    self.findPlayer()
+                    if iface == "MediaControl1":
+                        self.findPlayer()
+                else:
+                    self.status = "stop"
+                    self.announceStatus()
+                    self.track = {}
+                    self.announceTrack()
+                    self.state = "pending"
+                    self.announceState()
+                    self.deviceAlias = ""
+                    self.announceDevice()
         elif iface == "MediaTransport1":
             if "State" in changed:
                 self.state = (changed["State"])
@@ -200,10 +206,11 @@ class BluePlayer(dbus.service.Object):
                 self.announceDiscoverable()
 
     def announceTrack(self):
-        client.publish(self.mqttTopicPrefix + 'track', '{"album":"' + (self.track['Album'] if 'Album' in self.track else '') + '","artist":"' + (self.track['Artist'] if 'Artist' in self.track else '') + '","title":"' + (self.track['Title'] if 'Title' in self.track else '') + '","genre":"' + (self.track['Genre'] if 'Genre' in self.track else '') + '","duration":' + str((self.track['Duration'] if 'Duration' in self.track else '')) + '}', retain=True)
+        client.publish(self.mqttTopicPrefix + 'track', '{"album":"' + (self.track['Album'] if 'Album' in self.track else '') + '","artist":"' + (self.track['Artist'] if 'Artist' in self.track else '') + '","title":"' + (self.track['Title'] if 'Title' in self.track else '') + '","genre":"' + (self.track['Genre'] if 'Genre' in self.track else '') + '","duration":' + str((self.track['Duration'] if 'Duration' in self.track else '0')) + '}', retain=True)
 
     def announceStatus(self):
-        status = {"playing":"play","paused":"pause","stopped":"stop"}[self.status]
+        statuses = {"playing":"play","paused":"pause","stopped":"stop"}
+        status = statuses[self.status] if self.status in statuses else self.status
         client.publish(self.mqttTopicPrefix + 'status', status, retain=True)
 
     def announceConnected(self):

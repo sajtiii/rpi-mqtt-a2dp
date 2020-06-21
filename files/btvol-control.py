@@ -15,8 +15,13 @@ MQTT_PASSWORD = ''
 
 
 # Do not edit below
+MIXER_NAME = alsaaudio.mixers()[0]
+
 def announceVolume():
-    client.publish(mqttTopicPrefix + 'volume', str(mixer.getvolume()[0]), retain=True)
+    volume = subprocess.Popen("amixer get " + MIXER_NAME + " | grep % | awk '{print $4}'| sed 's/[^0-9\]//g'", shell=True, stdout=subprocess.PIPE).stdout.read()
+    volume = str(volume, encoding = 'utf-8').replace("\n", '')
+    client.publish(mqttTopicPrefix + 'volume', volume, retain=True)
+    # client.publish(mqttTopicPrefix + 'volume', str(mixer.getvolume()[0]), retain=True)
 
 def announceBluetooth():
     state = subprocess.Popen('hciconfig hci0 | grep -oP "(UP|DOWN)"', shell=True, stdout=subprocess.PIPE).stdout.read()
@@ -31,7 +36,8 @@ def onMessage(client, userdata, message):
     if (service == 'volume/set'):
         volume = int(message.payload)
         if (volume >= 0 and volume <= 100):
-            mixer.setvolume(volume)
+            os.system('amixer set ' + MIXER_NAME + ' ' + str(volume) + '% -q');
+            # mixer.setvolume(volume)
         announceVolume()
 
 
