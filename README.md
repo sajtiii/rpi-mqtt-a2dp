@@ -58,4 +58,4 @@ Installation scripts and .service files
 
 
 ##### Buy me a Coffee
-If you find this project useful, please consider supporting my work on [Patreon](https://www.patreon.com/sajtii) or [PayPal](paypal.me/cheee)
+If you find this project useful, please consider supporting my work on [Patreon](https://www.patreon.com/sajtii) or [PayPal](https://paypal.me/cheee)
